@@ -14,6 +14,7 @@
 
 # TODO: add a Dockerfile and uncomment the following line
 # CMDS=imagepopulatorplugin
+CMDS=imageplugin
 all: build
 
 include release-tools/build.make
