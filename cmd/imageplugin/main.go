@@ -16,5 +16,31 @@ limitations under the License.
 
 package main
 
+import (
+	"flag"
+	"os"
+
+	"github.com/kubernetes-csi/csi-driver-image-populator/pkg/image"
+)
+
+func init() {
+	flag.Set("logtostderr", "true")
+}
+
+var (
+	endpoint   = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
+	driverName = flag.String("drivername", "image.csi.k8s.io", "name of the driver")
+	nodeID     = flag.String("nodeid", "", "node id")
+)
+
 func main() {
+	flag.Parse()
+
+	handle()
+	os.Exit(0)
+}
+
+func handle() {
+	driver := image.NewDriver(*driverName, *nodeID, *endpoint)
+	driver.Run()
 }
