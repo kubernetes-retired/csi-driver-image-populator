@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# TODO: add a Dockerfile and uncomment the following line
-# CMDS=imagepopulatorplugin
-CMDS=imageplugin
+CMDS=imagepopulatorplugin
 all: build
 
 include release-tools/build.make
