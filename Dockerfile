@@ -7,6 +7,6 @@ RUN \
   yum install -y buildah && \
   yum clean all
 
-COPY ./bin/imageplugin /imageplugin
-ENTRYPOINT ["/imageplugin"]
+COPY ./bin/imagepopulatorplugin /imagepopulatorplugin
+ENTRYPOINT ["/imagepopulatorplugin"]
 
