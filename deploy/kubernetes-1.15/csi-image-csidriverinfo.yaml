@@ -5,5 +5,3 @@ metadata:
 spec:
   attachRequired: false
   podInfoOnMount: false
-# Once Supported
-# mode: ephemeral
