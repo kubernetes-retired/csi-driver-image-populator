@@ -54,6 +54,10 @@ spec:
           securityContext:
             privileged: true
           volumeMounts:
+            - mountPath: /var/csi-image-driver
+              name: csi-image-driver-scratch
+            - mountPath: /var/run/dockershim.sock
+              name: cri-socket-dir
             - mountPath: /csi
               name: socket-dir
             - mountPath: /var/lib/kubelet/pods
@@ -67,6 +71,14 @@ spec:
               name: storagerunroot-dir
 
       volumes:
+        - hostPath:
+            path: /var/run/dockershim.sock
+            type: Socket
+          name: cri-socket-dir
+        - hostPath:
+            path: /var/csi-image-driver
+            type: DirectoryOrCreate
+          name: csi-image-driver-scratch
         - hostPath:
             path: /var/lib/kubelet/plugins/csi-image
             type: DirectoryOrCreate

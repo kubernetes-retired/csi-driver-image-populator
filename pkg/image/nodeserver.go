@@ -19,23 +19,24 @@ package image
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"strings"
+	"path/filepath"
 	"time"
 
-	"github.com/golang/glog"
-	"golang.org/x/net/context"
-
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/golang/glog"
+	"github.com/kubernetes-csi/drivers/pkg/csi-common"
+	. "github.com/otiai10/copy"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	cri "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 	"k8s.io/kubernetes/pkg/util/mount"
-
-	"github.com/kubernetes-csi/drivers/pkg/csi-common"
 )
 
 const (
-	deviceID = "deviceID"
+	deviceID         = "deviceID"
+	cpStaticLocation = "/cp-static"
 )
 
 var (
@@ -44,6 +45,7 @@ var (
 
 type nodeServer struct {
 	*csicommon.DefaultNodeServer
+	criConn  *grpc.ClientConn
 	Timeout  time.Duration
 	execPath string
 	args     []string
@@ -66,6 +68,7 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 
 	err := ns.setupVolume(req.GetVolumeId(), image)
 	if err != nil {
+		glog.V(4).Infof("error: %v", err)
 		return nil, err
 	}
 
@@ -106,16 +109,8 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		options = append(options, "ro")
 	}
 
-	args := []string{"mount", volumeId}
-	ns.execPath = "/bin/buildah" // FIXME
-	output, err := ns.runCmd(args)
-	// FIXME handle failure.
-	provisionRoot := strings.TrimSpace(string(output[:]))
-	glog.V(4).Infof("container mount point at %s\n", provisionRoot)
-
 	mounter := mount.New("")
-	path := provisionRoot
-	if err := mounter.Mount(path, targetPath, "", options); err != nil {
+	if err := mounter.Mount(contentPath(volumeId), targetPath, "", options); err != nil {
 		return nil, err
 	}
 
@@ -148,53 +143,95 @@ func (ns *nodeServer) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
 
+// TODO: option for extracting image labels
+// TODO: option for label to indicate a mount path
+// TODO: context
 func (ns *nodeServer) setupVolume(volumeId string, image string) error {
 
-	args := []string{"from", "--name", volumeId, "--pull", image}
-	ns.execPath = "/bin/buildah" // FIXME
-	output, err := ns.runCmd(args)
-	// FIXME handle failure.
-	// FIXME handle already deleted.
-	provisionRoot := strings.TrimSpace(string(output[:]))
-	// FIXME remove
-	glog.V(4).Infof("container mount point at %s\n", provisionRoot)
+	glog.V(4).Infof("pulling %s", image)
+
+	// TODO: imagepullpolicy
+	imgService := cri.NewImageServiceClient(ns.criConn)
+	_, err := imgService.PullImage(context.TODO(), &cri.PullImageRequest{Image: &cri.ImageSpec{Image: image}})
+	if err != nil {
+		return err
+	}
+
+	// TODO: detect when this is already created, will cause conflicts otherwise
+	runService := cri.NewRuntimeServiceClient(ns.criConn)
+	pod, err := runService.RunPodSandbox(context.TODO(), &cri.RunPodSandboxRequest{
+		Config: &cri.PodSandboxConfig{
+			Metadata: &cri.PodSandboxMetadata{
+				Name: volumeId,
+			},
+		},
+		RuntimeHandler: "",
+	})
+	if err != nil {
+		glog.V(4).Infof("error creating pod sandbox for %s", image)
+		return err
+	}
+
+	glog.V(4).Infof("created pod sandbox %s", pod.PodSandboxId)
+
+	cpPath := filepath.Join(utilPath(volumeId), "cp")
+
+	// create a container that mounts in a statically linked `cp` command
+	container, err := runService.CreateContainer(context.TODO(), &cri.CreateContainerRequest{
+		PodSandboxId: pod.PodSandboxId,
+		Config: &cri.ContainerConfig{
+			Metadata: &cri.ContainerMetadata{
+				Name:    "pull",
+				Attempt: 0,
+			},
+			Image: &cri.ImageSpec{
+				Image: image,
+			},
+			// TODO: allow specifying path within image instead of root
+			Command: []string{cpPath, "/", contentPath(volumeId)},
+			Mounts: []*cri.Mount{
+				{
+					ContainerPath: utilPath(volumeId),
+					HostPath:      utilPath(volumeId),
+					//TODO: is this necessary?
+					Propagation: cri.MountPropagation_PROPAGATION_BIDIRECTIONAL,
+				},
+				{
+					ContainerPath: contentPath(volumeId),
+					HostPath:      contentPath(volumeId),
+				},
+			},
+		},
+		SandboxConfig: &cri.PodSandboxConfig{
+			Metadata: &cri.PodSandboxMetadata{
+				Name: volumeId + "pull",
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	// load in a statically built `cp` that can copy content from within the container
+	// this is necessary because there is no way to get a hostPath for a container's fs via CRI
+	if err := Copy(cpStaticLocation, cpPath); err != nil {
+		return err
+	}
+
+	_, err = runService.StartContainer(context.TODO(), &cri.StartContainerRequest{
+		ContainerId: container.ContainerId,
+	})
+	if err != nil {
+		return err
+	}
+
+	// TODO: wait for container to finish copying, remove container, remove sandbox
+
 	return err
 }
 
 func (ns *nodeServer) unsetupVolume(volumeId string) error {
-
-	args := []string{"delete", volumeId}
-	ns.execPath = "/bin/buildah" // FIXME
-	output, err := ns.runCmd(args)
-	// FIXME handle failure.
-	// FIXME handle already deleted.
-	provisionRoot := strings.TrimSpace(string(output[:]))
-	// FIXME remove
-	glog.V(4).Infof("container mount point at %s\n", provisionRoot)
-	return err
-}
-
-func (ns *nodeServer) runCmd(args []string) ([]byte, error) {
-	execPath := ns.execPath
-
-	cmd := exec.Command(execPath, args...)
-
-	timeout := false
-	if ns.Timeout > 0 {
-		timer := time.AfterFunc(ns.Timeout, func() {
-			timeout = true
-			// TODO: cmd.Stop()
-		})
-		defer timer.Stop()
-	}
-
-	output, execErr := cmd.CombinedOutput()
-	if execErr != nil {
-		if timeout {
-			return nil, TimeoutError
-		}
-	}
-	return output, execErr
+	return os.RemoveAll("/var/csi-image-driver/content/" + volumeId)
 }
 
 func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
@@ -203,4 +240,16 @@ func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 
 func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
 	return &csi.NodeStageVolumeResponse{}, nil
+}
+
+func volumePath(volumeId string) string {
+	return filepath.Join("/var/csi-image-driver/volumes/", volumeId)
+}
+
+func utilPath(volumeId string) string {
+	return filepath.Join(volumePath(volumeId), "util")
+}
+
+func contentPath(volumeId string) string {
+	return filepath.Join(volumePath(volumeId), "content")
 }

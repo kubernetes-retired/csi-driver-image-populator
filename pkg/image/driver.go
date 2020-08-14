@@ -17,10 +17,14 @@ limitations under the License.
 package image
 
 import (
+	"time"
+
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
-
 	"github.com/kubernetes-csi/drivers/pkg/csi-common"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
+	"k8s.io/kubernetes/pkg/kubelet/util"
 )
 
 type driver struct {
@@ -32,13 +36,15 @@ type driver struct {
 
 	cap   []*csi.VolumeCapability_AccessMode
 	cscap []*csi.ControllerServiceCapability
+
+	criConn *grpc.ClientConn
 }
 
 var (
 	version = "0.0.1"
 )
 
-func NewDriver(driverName, nodeID, endpoint string) *driver {
+func NewDriver(driverName, nodeID, endpoint string) (*driver, error) {
 	glog.Infof("Driver: %v version: %v", driverName, version)
 
 	d := &driver{}
@@ -54,12 +60,41 @@ func NewDriver(driverName, nodeID, endpoint string) *driver {
 
 	d.csiDriver = csiDriver
 
-	return d
+	glog.V(4).Info("establishing CRI connection")
+
+	// TODO: cri endpoint should at least be configurable, or ideally discover the CRI endpoint
+	addr, dialer, err := util.GetAddressAndDialer("unix:///var/run/dockershim.sock")
+	if err != nil {
+		glog.V(4).Info("failed to create CRI dialer")
+		return nil, err
+	}
+	glog.V(4).Info("dialer created")
+
+	// TODO: DialWithContext
+	conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithDialer(dialer))
+	if err != nil {
+		glog.V(4).Info("failed to establish CRI connection")
+		return nil, err
+	}
+
+	// TODO: context w/ timout
+	for {
+		state := conn.GetState()
+		glog.V(4).Info(state.String())
+		if state == connectivity.Ready {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+	d.criConn = conn
+
+	return d, nil
 }
 
 func NewNodeServer(d *driver) *nodeServer {
 	return &nodeServer{
 		DefaultNodeServer: csicommon.NewDefaultNodeServer(d.csiDriver),
+		criConn:           d.criConn,
 	}
 }
 

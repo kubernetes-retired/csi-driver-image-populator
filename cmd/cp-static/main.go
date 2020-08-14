@@ -17,32 +17,19 @@ limitations under the License.
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 
-	"github.com/kubernetes-csi/csi-driver-image-populator/pkg/image"
-)
-
-func init() {
-	flag.Set("logtostderr", "true")
-}
-
-var (
-	endpoint   = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
-	driverName = flag.String("drivername", "image.csi.k8s.io", "name of the driver")
-	nodeID     = flag.String("nodeid", "", "node id")
+	. "github.com/otiai10/copy"
 )
 
 func main() {
-	flag.Parse()
-
-	driver, err := image.NewDriver(*driverName, *nodeID, *endpoint)
-	if err != nil {
+	if len(os.Args) < 3 {
+		os.Exit(1)
+	}
+	if err := Copy(os.Args[1], os.Args[2]); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	driver.Run()
-
 	os.Exit(0)
 }
