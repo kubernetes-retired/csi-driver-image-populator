@@ -63,8 +63,9 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 	}
 
 	image := req.GetVolumeContext()["image"]
+	tlsVerify := req.GetVolumeContext()["tlsVerify"] != "false"
 
-	err := ns.setupVolume(req.GetVolumeId(), image)
+	err := ns.setupVolume(req.GetVolumeId(), image, tlsVerify)
 	if err != nil {
 		return nil, err
 	}
@@ -148,9 +149,8 @@ func (ns *nodeServer) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
 
-func (ns *nodeServer) setupVolume(volumeId string, image string) error {
-
-	args := []string{"from", "--name", volumeId, "--pull", image}
+func (ns *nodeServer) setupVolume(volumeId string, image string, tlsVerify bool) error {
+	args := []string{"from", fmt.Sprintf("--tls-verify=%v", tlsVerify), "--name", volumeId, "--pull", image}
 	ns.execPath = "/bin/buildah" // FIXME
 	output, err := ns.runCmd(args)
 	// FIXME handle failure.
