@@ -65,6 +65,9 @@ spec:
             - mountPath: /var/run/containers/storage
               mountPropagation: Bidirectional
               name: storagerunroot-dir
+            - mountPath: /var/run/dbus/system_bus_socket
+              name: dbus-socket
+              readOnly: true
 
       volumes:
         - hostPath:
@@ -87,4 +90,8 @@ spec:
             path: /var/run/containers/storage
             type: DirectoryOrCreate
           name: storagerunroot-dir
+        - hostPath:
+            path: /var/run/dbus/system_bus_socket
+            type: Socket
+          name: dbus-socket
 
