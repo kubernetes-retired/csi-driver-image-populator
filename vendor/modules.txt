@@ -1,0 +1,80 @@
+# github.com/container-storage-interface/spec v1.0.0
+## explicit
+github.com/container-storage-interface/spec/lib/go/csi
+# github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+## explicit
+github.com/golang/glog
+# github.com/golang/protobuf v1.2.0
+github.com/golang/protobuf/proto
+github.com/golang/protobuf/protoc-gen-go/descriptor
+github.com/golang/protobuf/ptypes
+github.com/golang/protobuf/ptypes/any
+github.com/golang/protobuf/ptypes/duration
+github.com/golang/protobuf/ptypes/timestamp
+github.com/golang/protobuf/ptypes/wrappers
+# github.com/kubernetes-csi/drivers v1.0.0
+## explicit
+github.com/kubernetes-csi/drivers/pkg/csi-common
+# github.com/spf13/afero v1.5.1
+## explicit
+# github.com/stretchr/testify v1.7.0
+## explicit
+# golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3
+## explicit
+golang.org/x/net/context
+golang.org/x/net/http/httpguts
+golang.org/x/net/http2
+golang.org/x/net/http2/hpack
+golang.org/x/net/idna
+golang.org/x/net/internal/timeseries
+golang.org/x/net/trace
+# golang.org/x/sys v0.0.0-20190412213103-97732733099d
+golang.org/x/sys/unix
+# golang.org/x/text v0.3.3
+golang.org/x/text/secure/bidirule
+golang.org/x/text/transform
+golang.org/x/text/unicode/bidi
+golang.org/x/text/unicode/norm
+# google.golang.org/genproto v0.0.0-20181109154231-b5d43981345b
+## explicit
+google.golang.org/genproto/googleapis/rpc/status
+# google.golang.org/grpc v1.16.0
+## explicit
+google.golang.org/grpc
+google.golang.org/grpc/balancer
+google.golang.org/grpc/balancer/base
+google.golang.org/grpc/balancer/roundrobin
+google.golang.org/grpc/codes
+google.golang.org/grpc/connectivity
+google.golang.org/grpc/credentials
+google.golang.org/grpc/encoding
+google.golang.org/grpc/encoding/proto
+google.golang.org/grpc/grpclog
+google.golang.org/grpc/internal
+google.golang.org/grpc/internal/backoff
+google.golang.org/grpc/internal/channelz
+google.golang.org/grpc/internal/envconfig
+google.golang.org/grpc/internal/grpcrand
+google.golang.org/grpc/internal/transport
+google.golang.org/grpc/keepalive
+google.golang.org/grpc/metadata
+google.golang.org/grpc/naming
+google.golang.org/grpc/peer
+google.golang.org/grpc/resolver
+google.golang.org/grpc/resolver/dns
+google.golang.org/grpc/resolver/passthrough
+google.golang.org/grpc/stats
+google.golang.org/grpc/status
+google.golang.org/grpc/tap
+# k8s.io/apimachinery v0.0.0-20181110190943-2a7c93004028
+## explicit
+k8s.io/apimachinery/pkg/util/sets
+# k8s.io/kubernetes v1.12.2
+## explicit
+k8s.io/kubernetes/pkg/util/file
+k8s.io/kubernetes/pkg/util/io
+k8s.io/kubernetes/pkg/util/mount
+k8s.io/kubernetes/pkg/util/nsenter
+# k8s.io/utils v0.0.0-20181102055113-1bd4f387aa67
+## explicit
+k8s.io/utils/exec
