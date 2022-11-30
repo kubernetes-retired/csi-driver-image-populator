@@ -1,17 +1,24 @@
 module github.com/kubernetes-csi/csi-driver-image-populator
 
-go 1.15
+go 1.18
 
 require (
 	github.com/container-storage-interface/spec v1.0.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/kubernetes-csi/drivers v1.0.0
-	github.com/spf13/afero v1.5.1 // indirect
-	github.com/stretchr/testify v1.7.0 // indirect
-	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3
-	google.golang.org/genproto v0.0.0-20181109154231-b5d43981345b // indirect
-	google.golang.org/grpc v1.16.0
-	k8s.io/apimachinery v0.0.0-20181110190943-2a7c93004028 // indirect
+	golang.org/x/net v0.1.1-0.20221027164007-c63010009c80
+	google.golang.org/grpc v1.27.0
 	k8s.io/kubernetes v1.12.2
-	k8s.io/utils v0.0.0-20181102055113-1bd4f387aa67 // indirect
+)
+
+require (
+	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/spf13/afero v1.5.1 // indirect
+	github.com/stretchr/testify v1.4.0 // indirect
+	golang.org/x/sys v0.1.0 // indirect
+	golang.org/x/text v0.4.0 // indirect
+	google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55 // indirect
+	google.golang.org/protobuf v1.28.1 // indirect
+	k8s.io/apimachinery v0.0.0-20181110190943-2a7c93004028 // indirect
+	k8s.io/utils v0.0.0-20221107191617-1a15be271d1d // indirect
 )
